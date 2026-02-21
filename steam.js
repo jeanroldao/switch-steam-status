@@ -161,36 +161,36 @@ async function updateAndRestart(gameName) {
     // 1. Kill existing keep-alive process
     killKeepAlive();
 
-    // 2. Update shortcuts.vdf — keep appid consistent with the new name.
-    //    Steam recomputes appid = CRC32(exe + AppName) | 0x80000000 when loading,
-    //    so we must update both fields together or the steam://rungameid URL will
-    //    point to the wrong (stale) appid.
     const exeWithQuotes = `"${process.execPath}"`;
     const newAppId = computeShortcutAppId(exeWithQuotes, gameName);
     shortcutAppId = newAppId;
 
+    // 2. Check if shortcuts.vdf already has the right AppName.
+    //    If so, skip the VDF write + Steam restart — just relaunch the shortcut.
     const shortcuts = parseShortcuts(readFileSync(vdfPath));
     const entry = shortcuts.get(shortcutKey);
-    if (entry?.type === T_MAP) {
-      entry.value.set('AppName', { type: T_STR,   value: gameName });
-      entry.value.set('appid',   { type: T_INT32, value: newAppId });
+    const storedName = entry?.type === T_MAP ? entry.value.get('AppName')?.value : null;
+
+    if (storedName !== gameName) {
+      // Name changed — update shortcuts.vdf and restart Steam so it picks up the new name.
+      if (entry?.type === T_MAP) {
+        entry.value.set('AppName', { type: T_STR,   value: gameName });
+        entry.value.set('appid',   { type: T_INT32, value: newAppId });
+      }
+      writeFileSync(vdfPath, serializeShortcuts(shortcuts));
+      console.log(`[Steam] Shortcut renamed to: ${gameName} (appid=${newAppId >>> 0})`);
+
+      console.log('[Steam] Restarting Steam...');
+      try { execSync('taskkill /f /im steam.exe', { stdio: 'ignore' }); } catch {}
+      await sleep(3_000);
+      spawn(join(steamPath, 'steam.exe'), [], { detached: true, stdio: 'ignore' }).unref();
+      console.log(`[Steam] Waiting ${STEAM_RESTART_WAIT_MS / 1000}s for Steam to load...`);
+      await sleep(STEAM_RESTART_WAIT_MS);
+    } else {
+      console.log(`[Steam] Shortcut already named: ${gameName} — skipping Steam restart`);
     }
-    writeFileSync(vdfPath, serializeShortcuts(shortcuts));
-    console.log(`[Steam] Shortcut renamed to: ${gameName} (appid=${newAppId >>> 0})`);
 
-    // 3. Kill Steam
-    console.log('[Steam] Restarting Steam...');
-    try { execSync('taskkill /f /im steam.exe', { stdio: 'ignore' }); } catch {}
-    await sleep(3_000);
-
-    // 4. Start Steam
-    spawn(join(steamPath, 'steam.exe'), [], { detached: true, stdio: 'ignore' }).unref();
-
-    // 5. Wait for Steam to initialise
-    console.log(`[Steam] Waiting ${STEAM_RESTART_WAIT_MS / 1000}s for Steam to load...`);
-    await sleep(STEAM_RESTART_WAIT_MS);
-
-    // 6. Launch our shortcut so Steam shows us as in-game
+    // 3. Launch the shortcut so Steam shows us as in-game
     const gameId = toGameId(shortcutAppId);
     console.log(`[Steam] Launching shortcut (appid=${shortcutAppId >>> 0}, gameId=${gameId})`);
     spawn(join(steamPath, 'steam.exe'), [`steam://rungameid/${gameId}`], {

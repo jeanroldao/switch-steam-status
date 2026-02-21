@@ -22,4 +22,7 @@ process.on('exit', () => {
 });
 
 // Hang indefinitely — Steam tracks this process to determine in-game status.
+// setInterval keeps the Node.js event loop alive; without it Node.js v22+ exits
+// immediately when the event loop drains on an unsettled top-level await.
+setInterval(() => {}, 2 ** 31 - 1);
 await new Promise(() => {});

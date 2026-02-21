@@ -85,5 +85,8 @@ async function main() {
 
 main().catch((err) => {
   console.error('[Fatal]', err.message);
+  if (err.response?.status) console.error('  HTTP status:', err.response.status);
+  if (err.data)             console.error('  Response body:', JSON.stringify(err.data));
+  if (!err.response)        console.error(err);
   process.exit(1);
 });
