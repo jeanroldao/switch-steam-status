@@ -1,0 +1,5 @@
+node_modules/
+.env
+steam_appid.txt
+*.log
+.claude/
