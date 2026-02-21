@@ -31,7 +31,8 @@ let currentGame = null; // null = not playing / presence cleared
 async function poll() {
   const presence = await getFriendPresence();
   const isPlaying =
-    presence?.state === 'PLAYING' && typeof presence.game?.name === 'string';
+    (presence?.state === 'PLAYING' || presence?.state === 'ONLINE') &&
+    typeof presence.game?.name === 'string';
 
   if (isPlaying) {
     const gameName = presence.game.name;
@@ -74,14 +75,14 @@ async function main() {
   try {
     await poll();
   } catch (err) {
-    console.error('[Poll] Error on first poll:', err.message);
+    console.error('[Poll] Error on first poll:', err);
   }
 
   setInterval(async () => {
     try {
       await poll();
     } catch (err) {
-      console.error('[Poll] Error:', err.message);
+      console.error('[Poll] Error:', err);
     }
   }, POLL_INTERVAL_MS);
 }

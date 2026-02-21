@@ -6,9 +6,9 @@
  * Steamworks SDK) is needed at runtime alongside the project root.
  */
 
-import { init, localplayer } from 'steamworks.js';
+import { init } from 'steamworks.js';
 
-let initialised = false;
+let client = null;
 
 /**
  * Initialise the Steam API.
@@ -19,8 +19,7 @@ let initialised = false;
  */
 export function initSteam(appId) {
   try {
-    init(Number(appId));
-    initialised = true;
+    client = init(Number(appId));
   } catch (err) {
     throw new Error(
       `Steam API initialisation failed: ${err.message}\n` +
@@ -39,14 +38,15 @@ export function initSteam(appId) {
  * @param {string} gameName  Title of the Switch game currently being played
  */
 export function setGamePresence(gameName) {
-  if (!initialised) return;
-  localplayer.setRichPresence('status', gameName);
+  if (!client) return;
+  client.localplayer.setRichPresence('steam_display', gameName);
+  client.localplayer.setRichPresence('status', gameName);
 }
 
 /**
  * Clear Steam Rich Presence (shown as idle / no sub-status).
  */
 export function clearPresence() {
-  if (!initialised) return;
-  localplayer.setRichPresence('status', '');
+  if (!client) return;
+  client.localplayer.setRichPresence('status', '');
 }

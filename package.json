@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "dotenv": "^16.4.5",
-    "steamworks.js": "*",
-    "nxapi": "^1.0.0"
+    "nxapi": "^1.6.1-next.248",
+    "steamworks.js": "*"
   }
 }

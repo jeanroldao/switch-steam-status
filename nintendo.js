@@ -9,6 +9,17 @@
  */
 
 import CoralApi from 'nxapi/coral';
+import { addUserAgent, setClientAuthentication } from 'nxapi';
+import { ClientAssertionProvider, NXAPI_AUTH_CLI_CLIENT_ID } from './node_modules/nxapi/dist/util/nxapi-auth.js';
+
+// nxapi requires an identifying user-agent string for third-party API calls.
+// When used as a library (not via the CLI), this must be set programmatically.
+addUserAgent(process.env.NXAPI_USER_AGENT ?? 'switch-steam-status/1.0.0');
+
+// Authenticate to nxapi-znca-api.fancy.org.uk using the embedded npm client
+// credentials. Required since June 2025 when the znca-api started requiring
+// client authentication.
+setClientAuthentication(new ClientAssertionProvider(NXAPI_AUTH_CLI_CLIENT_ID));
 
 let client = null;
 let sessionToken = null;
@@ -54,8 +65,7 @@ export async function getFriendPresence() {
 
   try {
     const response = await client.getFriendList();
-    // NSO API wraps results under a `result` key
-    friendList = response.result.friendList;
+    friendList = response.friends;
   } catch (err) {
     // The Coral API token expires periodically (usually after a few hours).
     // Detect auth failures and transparently re-authenticate.
@@ -68,7 +78,7 @@ export async function getFriendPresence() {
       console.log('[Nintendo] Token expired — re-authenticating...');
       await authenticate();
       const response = await client.getFriendList();
-      friendList = response.result.friendList;
+      friendList = response.friends;
     } else {
       throw err;
     }
