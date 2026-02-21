@@ -10,16 +10,29 @@
 
 import CoralApi from 'nxapi/coral';
 import { addUserAgent, setClientAuthentication } from 'nxapi';
-import { ClientAssertionProvider, NXAPI_AUTH_CLI_CLIENT_ID } from './node_modules/nxapi/dist/util/nxapi-auth.js';
 
 // nxapi requires an identifying user-agent string for third-party API calls.
 // When used as a library (not via the CLI), this must be set programmatically.
 addUserAgent(process.env.NXAPI_USER_AGENT ?? 'switch-steam-status/1.0.0');
 
-// Authenticate to nxapi-znca-api.fancy.org.uk using the embedded npm client
-// credentials. Required since June 2025 when the znca-api started requiring
-// client authentication.
-setClientAuthentication(new ClientAssertionProvider(NXAPI_AUTH_CLI_CLIENT_ID));
+// Since June 2025, nxapi-znca-api.fancy.org.uk requires OAuth client authentication.
+// Register a free client at https://nxapi-auth.fancy.org.uk/oauth/clients
+// and set NXAPI_ZNCA_API_CLIENT_ID in .env.
+//
+// Note: do NOT use ClientAssertionProvider from the nxapi internal dist path —
+// the npm package omits the signing key (release=null), so JWTs are signed with
+// 32 zero bytes and are rejected by nxapi-auth with a non-200 response.
+{
+  const clientId = process.env.NXAPI_ZNCA_API_CLIENT_ID;
+  if (!clientId) {
+    throw new Error(
+      '[Nintendo] NXAPI_ZNCA_API_CLIENT_ID is not set.\n' +
+      '  Register a free client at https://nxapi-auth.fancy.org.uk/oauth/clients\n' +
+      '  then add NXAPI_ZNCA_API_CLIENT_ID=<your-client-id> to .env'
+    );
+  }
+  setClientAuthentication({ id: clientId, scope: 'ca:gf ca:er ca:dr' });
+}
 
 let client = null;
 let sessionToken = null;

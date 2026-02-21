@@ -38,7 +38,7 @@ async function poll() {
     const gameName = presence.game.name;
     if (gameName !== currentGame) {
       console.log(`[Status] Now playing: ${gameName}`);
-      setGamePresence(gameName);
+      await setGamePresence(gameName);
       currentGame = gameName;
     }
     // Presence unchanged — no Steam call needed
@@ -46,7 +46,7 @@ async function poll() {
     if (currentGame !== null) {
       const reason = presence?.state ?? 'unknown';
       console.log(`[Status] Not playing (state: ${reason}) — clearing Rich Presence`);
-      clearPresence();
+      await clearPresence();
       currentGame = null;
     }
     // Already cleared — nothing to do
@@ -58,15 +58,11 @@ async function poll() {
 async function main() {
   validateEnv();
 
-  const {
-    NSO_SESSION_TOKEN,
-    NSO_FRIEND_NAME,
-    STEAM_APP_ID = '480',
-  } = process.env;
+  const { NSO_SESSION_TOKEN, NSO_FRIEND_NAME } = process.env;
 
   // Initialise Nintendo first so auth errors surface before Steam init.
   await initNintendo(NSO_SESSION_TOKEN, NSO_FRIEND_NAME);
-  initSteam(STEAM_APP_ID);
+  await initSteam();
 
   console.log(`\n[Main] Polling every ${POLL_INTERVAL_MS / 1000}s for: ${NSO_FRIEND_NAME}`);
   console.log('[Main] Press Ctrl+C to stop.\n');
